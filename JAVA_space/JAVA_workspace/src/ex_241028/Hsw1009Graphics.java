@@ -13,16 +13,60 @@ import java.util.Vector;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import javax.swing.BorderFactory;
 
 public class Hsw1009Graphics extends JFrame {
     public Hsw1009Graphics() {
         setTitle("마우스로 도형 그리기 구현");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        // 버튼 패널 설정
         JPanel buttonPanel = new JPanel();
-        
+        buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 10, 10)); // 가운데 정렬, 간격 10 설정
+
+        // 그리기 패널 설정
         MyPanel drawingPanel = new MyPanel();
-        setContentPane(drawingPanel);
-        setSize(300, 300);
+
+        // 버튼 생성
+        JButton lineButton = new JButton("직선");
+        JButton rectangleButton = new JButton("사각형");
+        JButton resetButton = new JButton("초기화");
+
+        // 버튼 이벤트 리스너
+        lineButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                drawingPanel.setRectangleMode(false);
+                drawingPanel.enableDrawing(true);
+            }
+        });
+
+        rectangleButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                drawingPanel.setRectangleMode(true);
+                drawingPanel.enableDrawing(true);
+            }
+        });
+
+        resetButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                drawingPanel.resetDrawing();
+            }
+        });
+
+        // 버튼 패널에 버튼 추가
+        buttonPanel.add(lineButton);
+        buttonPanel.add(rectangleButton);
+        buttonPanel.add(resetButton);
+        buttonPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0)); // 위, 아래 간격 추가
+
+        // 프레임에 버튼 패널과 그리기 패널 추가
+        add(buttonPanel, "North");
+        add(drawingPanel, "Center");
+
+        setSize(400, 400);
         setVisible(true);
     }
 
@@ -33,49 +77,10 @@ public class Hsw1009Graphics extends JFrame {
     class MyPanel extends JPanel {
         private Vector<Point> vStart = new Vector<Point>();
         private Vector<Point> vEnd = new Vector<Point>();
-        private boolean isRectangleMode = false;
+        private boolean isRectangleMode = true;
         private boolean isDrawingEnabled = true;
 
         public MyPanel() {
-            setLayout(null);
-
-
-            JButton lineButton = new JButton("직선");
-            lineButton.setBounds(10, 10, 80, 30);
-            lineButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    isRectangleMode = false;
-                    isDrawingEnabled = true;
-                }
-            });
-
-            JButton rectangleButton = new JButton("사각형");
-            rectangleButton.setBounds(100, 10, 80, 30);
-            rectangleButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    isRectangleMode = true;
-                    isDrawingEnabled = true;
-                }
-            });
-
-            JButton resetButton = new JButton("초기화");
-            resetButton.setBounds(190, 10, 80, 30);
-            resetButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    vStart.clear(); 
-                    vEnd.clear(); 
-                    isDrawingEnabled = false;
-                    repaint();
-                }
-            });
-
-            add(lineButton);
-            add(rectangleButton);
-            add(resetButton);
-
             addMouseListener(new MouseAdapter() {
                 public void mousePressed(MouseEvent e) {
                     if (isDrawingEnabled) { // 그리기 가능 상태일 때만 동작
@@ -94,6 +99,21 @@ public class Hsw1009Graphics extends JFrame {
             });
         }
 
+        public void setRectangleMode(boolean isRectangle) {
+            this.isRectangleMode = isRectangle;
+        }
+
+        public void enableDrawing(boolean enable) {
+            this.isDrawingEnabled = enable;
+        }
+
+        public void resetDrawing() {
+            vStart.clear();
+            vEnd.clear();
+            isDrawingEnabled = false;
+            repaint();
+        }
+
         public void paintComponent(Graphics g) {
             super.paintComponent(g);
             g.setColor(Color.BLUE);
@@ -103,14 +123,12 @@ public class Hsw1009Graphics extends JFrame {
                 Point e = vEnd.elementAt(i);
 
                 if (isRectangleMode) {
-
                     int x = Math.min(s.x, e.x);
                     int y = Math.min(s.y, e.y);
                     int width = Math.abs(s.x - e.x);
                     int height = Math.abs(s.y - e.y);
                     g.drawRect(x, y, width, height);
                 } else {
-
                     g.drawLine(s.x, s.y, e.x, e.y);
                 }
             }
