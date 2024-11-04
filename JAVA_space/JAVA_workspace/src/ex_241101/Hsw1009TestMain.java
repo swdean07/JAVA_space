@@ -4,33 +4,44 @@ import javax.swing.*;
 import javax.swing.border.LineBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.event.ActionEvent;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.List;
 
 public class Hsw1009TestMain extends JFrame {
-    // Constants for UI messages
+    // 프로그램 제목과 메시지 상수 정의
     private static final String TITLE = "회원 관리 프로그램 V 1.0.0";
-    private static final String INPUT_ERROR_MSG = "모든 필드와 이미지를 입력하세요.";
+    private static final String INPUT_ERROR_MSG = "이미지 첨부와 내용을 작성하세요.";
     private static final String EMAIL_EXISTS_MSG = "이미 존재하는 이메일입니다.";
     private static final String INSERT_SUCCESS_MSG = "회원 정보가 성공적으로 저장되었습니다.";
     private static final String INSERT_FAIL_MSG = "회원 정보 저장에 실패했습니다.";
     private static final String NO_MEMBERS_FOUND_MSG = "조회된 회원이 없습니다.";
     private static final String FETCH_SUCCESS_MSG = "회원 목록이 성공적으로 불러왔습니다.";
     private static final String PROFILE_CANCEL_MSG = "프로필 이미지 선택이 취소되었습니다.";
-    private static final String HOBBY_PROMPT_MSG = "본인이 좋아하는 관심사는 무엇인가요?";
+    private static final String INTEREST_PROMPT_MSG = "요즘 관심 분야는 무엇인가요?";
+    private static final String SEARCH_CONFIRM_MSG = "검색을 진행하시겠습니까?";
+    private static final String DELETE_CONFIRM_MSG = "정말로 이 회원 정보를 삭제하시겠습니까?";
+    private static final String DELETE_SUCCESS_MSG = "회원 정보가 성공적으로 삭제되었습니다.";
+    private static final String DELETE_FAIL_MSG = "회원 정보 삭제에 실패했습니다.";
 
+    // UI 컴포넌트 정의
     private JTextField nameField;
     private JTextField emailField;
     private JPasswordField passwordField;
     private JTable memberTable;
     private DefaultTableModel tableModel;
-    private Hsw1009DAO memberDAO;
+    private Hsw1009DAO Hsw1009DAO; // DAO 객체
     private JLabel profileLabel;
-    private JLabel hobbyLabel; // 취미를 표시할 레이블
-    private JTextArea detailArea; // 상세 내용 입력을 위한 텍스트 영역
+    private JLabel interestLabel;
+    private JTextArea detailArea;
     private File profileImageFile;
 
     public Hsw1009TestMain() {
@@ -39,8 +50,9 @@ public class Hsw1009TestMain extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
-        memberDAO = new Hsw1009DAO();
+        Hsw1009DAO = new Hsw1009DAO(); // DAO 초기화
 
+        // 입력 패널 설정
         JPanel inputPanel = new JPanel(new FlowLayout());
         inputPanel.add(new JLabel("Name: "));
         nameField = new JTextField(10);
@@ -54,25 +66,30 @@ public class Hsw1009TestMain extends JFrame {
         passwordField = new JPasswordField(10);
         inputPanel.add(passwordField);
 
+        // 버튼 추가
         JButton addButton = new JButton("Add");
         JButton fetchButton = new JButton("Search");
         JButton uploadButton = new JButton("Upload");
+        JButton saveButton = new JButton("Save");
+        JButton deleteButton = new JButton("Delete");
 
         inputPanel.add(addButton);
         inputPanel.add(fetchButton);
         inputPanel.add(uploadButton);
+        inputPanel.add(saveButton);
+        inputPanel.add(deleteButton);
 
-        add(inputPanel, BorderLayout.NORTH);
+        add(inputPanel, BorderLayout.NORTH); // 상단에 입력 패널 추가
 
-        // 프로필 이미지와 취미를 표시할 JPanel 설정
+        // 프로필 패널 설정
         JPanel profilePanel = new JPanel();
         profilePanel.setLayout(new BorderLayout());
 
-        // 프로필 이미지를 위한 패널 생성
+        // 프로필 이미지 패널 설정
         JPanel imagePanel = new JPanel(new GridBagLayout());
         profileLabel = new JLabel("Profile Image", SwingConstants.CENTER);
         profileLabel.setPreferredSize(new Dimension(150, 150));
-        profileLabel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY)); // 연한 회색 테두리
+        profileLabel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridx = 0;
@@ -82,199 +99,248 @@ public class Hsw1009TestMain extends JFrame {
         
         profilePanel.add(imagePanel, BorderLayout.WEST);
 
-        // 취미를 표시할 레이블과 테두리를 설정할 JPanel
-        JPanel hobbyPanel = new JPanel();
-        hobbyPanel.setLayout(new BorderLayout());
-        hobbyPanel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY)); // 연한 회색 테두리
-        hobbyLabel = new JLabel("취미: 없음", SwingConstants.CENTER);
-        hobbyLabel.setPreferredSize(new Dimension(150, 30));
-        hobbyPanel.add(hobbyLabel, BorderLayout.NORTH);
+        // 관심 분야 패널 설정
+        JPanel interestPanel = new JPanel();
+        interestPanel.setLayout(new BorderLayout());
+        interestPanel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
+        interestLabel = new JLabel("관심 분야: 없음", SwingConstants.CENTER);
+        interestLabel.setPreferredSize(new Dimension(150, 30));
+        interestPanel.add(interestLabel, BorderLayout.NORTH);
 
-        // 상세 내용 입력을 위한 텍스트 영역 추가
         detailArea = new JTextArea(5, 20);
-        detailArea.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY)); // 연한 회색 테두리
-        detailArea.setBackground(Color.LIGHT_GRAY); // 회색 배경색 설정
-        detailArea.setLineWrap(true); // 줄 바꿈 허용
-        detailArea.setWrapStyleWord(true); // 단어 단위로 줄 바꿈
+        detailArea.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
+        detailArea.setBackground(Color.LIGHT_GRAY);
+        detailArea.setLineWrap(true);
+        detailArea.setWrapStyleWord(true);
 
-        // JScrollPane을 추가하여 스크롤 가능하게 설정
         JScrollPane scrollPane = new JScrollPane(detailArea);
-        scrollPane.setPreferredSize(new Dimension(200, 100)); // 원하는 고정 크기로 설정
-        hobbyPanel.add(scrollPane, BorderLayout.CENTER);
+        scrollPane.setPreferredSize(new Dimension(200, 100));
+        interestPanel.add(scrollPane, BorderLayout.CENTER);
 
-        profilePanel.add(hobbyPanel, BorderLayout.CENTER);
-        add(profilePanel, BorderLayout.WEST);
+        profilePanel.add(interestPanel, BorderLayout.CENTER);
+        add(profilePanel, BorderLayout.WEST); // 프로필 패널 추가
 
+        // 테이블 설정
         String[] columnNames = {"이름", "이메일", "패스워드"};
         tableModel = new DefaultTableModel(columnNames, 0);
         memberTable = new JTable(tableModel);
         JScrollPane tableScrollPane = new JScrollPane(memberTable);
-        add(tableScrollPane, BorderLayout.CENTER);
+        add(tableScrollPane, BorderLayout.CENTER); // 테이블 추가
 
+        // 버튼에 액션 리스너 추가
         addButton.addActionListener(e -> addMember());
-        fetchButton.addActionListener(e -> fetchMembers());
+        fetchButton.addActionListener(e -> selectMembers());
         uploadButton.addActionListener(e -> chooseProfileImage());
+        saveButton.addActionListener(e -> save());
+        deleteButton.addActionListener(e -> deleteMember());
 
-        setVisible(true);
+        setVisible(true); // 프레임 보이기
     }
 
-    // 이미지 선택과 취미 입력을 위한 메서드
     private void chooseProfileImage() {
+        // 프로필 이미지 선택기 설정
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
-        int result = fileChooser.showOpenDialog(this);
+        fileChooser.setAcceptAllFileFilterUsed(false);
+        fileChooser.addChoosableFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Images", "jpg", "png", "gif"));
+        
+        int result = fileChooser.showOpenDialog(this); // 이미지 선택 대화상자 표시
 
         if (result == JFileChooser.APPROVE_OPTION) {
             profileImageFile = fileChooser.getSelectedFile();
             ImageIcon profileIcon = new ImageIcon(new ImageIcon(profileImageFile.getAbsolutePath())
                     .getImage().getScaledInstance(150, 150, Image.SCALE_SMOOTH));
-            profileLabel.setIcon(profileIcon);
+            profileLabel.setIcon(profileIcon); // 선택한 이미지 설정
             System.out.println("프로필 이미지가 선택되었습니다: " + profileImageFile.getAbsolutePath());
 
-            // 좋아하는 관심사 입력 받기
-            String hobby = JOptionPane.showInputDialog(this, HOBBY_PROMPT_MSG);
-            if (hobby != null && !hobby.trim().isEmpty()) {
-                hobbyLabel.setText("취미: " + hobby);
-                System.out.println("취미가 입력되었습니다: " + hobby);
+            // 관심 분야 입력 받기
+            String interest = JOptionPane.showInputDialog(this, INTEREST_PROMPT_MSG);
+            if (interest != null && !interest.trim().isEmpty()) {
+                interestLabel.setText("관심 분야: " + interest);
+                System.out.println("내용이 입력되었습니다: " + interest);
             } else {
-                hobbyLabel.setText("취미: 없음");
-                System.out.println("취미가 입력되지 않았습니다.");
+                interestLabel.setText("관심 분야: 없음");
+                System.out.println("내용이 입력되지 않았습니다.");
             }
         } else {
-            System.out.println(PROFILE_CANCEL_MSG);
+            System.out.println(PROFILE_CANCEL_MSG); // 이미지 선택 취소 시 메시지
         }
     }
 
-    // 회원 추가 메서드
     private void addMember() {
+        // 회원 정보를 입력받고 저장하는 메서드
         String name = nameField.getText();
         String email = emailField.getText();
         String password = new String(passwordField.getPassword());
 
+        // 입력값 검증
         if (name.isEmpty() || email.isEmpty() || password.isEmpty() || profileImageFile == null) {
             JOptionPane.showMessageDialog(this, INPUT_ERROR_MSG, "입력 오류", JOptionPane.ERROR_MESSAGE);
-            System.out.println("회원 추가 실패: 모든 필드가 채워져야 합니다.");
             return;
         }
 
-        if (memberDAO.isEmailExists(email)) {
+        if (Hsw1009DAO.isEmailExists(email)) {
             JOptionPane.showMessageDialog(this, EMAIL_EXISTS_MSG, "입력 오류", JOptionPane.ERROR_MESSAGE);
-            System.out.println("회원 추가 실패: 이미 존재하는 이메일입니다.");
             return;
         }
 
         try {
-            String hashedPassword = hashPassword(password);
-            String hobby = hobbyLabel.getText().replace("취미: ", ""); // 취미 텍스트에서 "취미: "를 제거
-            String details = detailArea.getText(); // 상세 내용을 가져옴
-            Hsw1009DTO member = new Hsw1009DTO(name, email, hashedPassword, hobby + " - " + details, profileImageFile.getAbsolutePath());
-            if (memberDAO.insertMember(member)) {
+            String Password = Password(password); // 비밀번호 해싱
+            String interest = interestLabel.getText().replace("관심 분야: ", "");
+            String details = detailArea.getText();
+            
+            // 디버깅 정보 출력
+            System.out.println("Member Info: " + name + ", " + email + ", " + Password + ", " + interest + ", " + profileImageFile.getAbsolutePath());
+
+            Hsw1009DTO member = new Hsw1009DTO(name, email, Password, interest + " - " + details, profileImageFile.getAbsolutePath());
+            boolean isInserted = Hsw1009DAO.insertMember(member);
+            if (isInserted) {
                 JOptionPane.showMessageDialog(this, INSERT_SUCCESS_MSG, "저장 성공", JOptionPane.INFORMATION_MESSAGE);
-                tableModel.addRow(new String[]{name, email, "*****"});
-                System.out.println("회원 추가 성공: " + name + " (" + email + ")");
-                clearFields();
-                // 회원가입이 완료되었음을 알림
-                JOptionPane.showMessageDialog(this, "회원가입이 정상적으로 완료되었습니다.", "회원가입 완료", JOptionPane.INFORMATION_MESSAGE);
+                tableModel.addRow(new String[]{name, email, "*****"}); // 테이블에 추가
+                clearFields(); // 입력 필드 초기화
             } else {
                 JOptionPane.showMessageDialog(this, INSERT_FAIL_MSG, "저장 실패", JOptionPane.ERROR_MESSAGE);
-                System.out.println("회원 추가 실패: 데이터베이스 오류");
+                System.out.println("회원 정보 저장 실패: 이메일 = " + email);
             }
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "오류 발생: " + e.getMessage(), "오류", JOptionPane.ERROR_MESSAGE);
-            System.out.println("회원 추가 중 오류 발생: " + e.getMessage());
+        } catch (NoSuchAlgorithmException e) {
+            JOptionPane.showMessageDialog(this, "비밀번호 해싱 실패", "오류", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
         }
     }
 
-    private String hashPassword(String password) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hashedBytes = digest.digest(password.getBytes());
-            StringBuilder sb = new StringBuilder();
-            for (byte b : hashedBytes) {
-                sb.append(String.format("%02x", b));
+    private void selectMembers() {
+        // 회원 정보를 조회하는 메서드
+        List<Hsw1009DTO> members = Hsw1009DAO.selectAllMembers();
+        tableModel.setRowCount(0); // 테이블 초기화
+
+        if (members.isEmpty()) {
+            JOptionPane.showMessageDialog(this, NO_MEMBERS_FOUND_MSG, "조회 결과", JOptionPane.INFORMATION_MESSAGE);
+        } else {
+            for (Hsw1009DTO member : members) {
+                tableModel.addRow(new String[]{member.getName(), member.getEmail(), "*****"}); // 비밀번호는 숨김
             }
-            return sb.toString();
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("비밀번호 해싱 오류", e);
+            JOptionPane.showMessageDialog(this, FETCH_SUCCESS_MSG, "조회 성공", JOptionPane.INFORMATION_MESSAGE);
         }
     }
 
-    // 입력 필드 초기화 메서드
+    private void save() {
+        // 회원 정보를 파일로 저장하는 메서드
+        List<Hsw1009DTO> members = Hsw1009DAO.selectAllMembers();
+        String filePath = "C:\\Users\\admin\\Documents\\member501.csv";
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
+            // CSV 파일 헤더 작성
+            writer.write("Name,Email,Password,Interest,ProfileImage");
+            writer.newLine(); // 새 줄로 이동
+
+            for (Hsw1009DTO member : members) {
+                // 각 회원 정보를 CSV 형식으로 작성
+                writer.write(member.getName() + "," + member.getEmail() + "," + member.getPassword() + ","
+                        + member.getInterest() + "," + member.getProfileImagePath());
+                writer.newLine(); // 새 줄로 이동
+            }
+            JOptionPane.showMessageDialog(this, "회원 정보가 성공적으로 파일에 저장되었습니다.", "파일 저장", JOptionPane.INFORMATION_MESSAGE);
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(this, "파일 저장 중 오류가 발생했습니다.", "파일 저장 오류", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        }
+    }
+
+    
+    private void loadMembersFromFile() {
+        String filePath = "C:\\Users\\admin\\Documents\\member501.csv";
+        List<Hsw1009DTO> members = new ArrayList<>(); // 리스트 이름 수정
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+            String line;
+            reader.readLine(); // 첫 번째 줄(헤더)은 건너뜀
+
+            while ((line = reader.readLine()) != null) {
+                String[] data = line.split(",");
+                // 데이터 길이가 맞지 않는 경우 무시
+                if (data.length == 5) {
+                    String name = data[0].trim();
+                    String email = data[1].trim();
+                    String password = data[2].trim();
+                    String interest = data[3].trim();
+                    String profileImage = data[4].trim();
+
+                    // 회원 DTO 객체 생성 및 추가
+                    members.add(new Hsw1009DTO(name, email, password, interest, profileImage));
+                } else {
+                    System.err.println("데이터 형식 오류: " + line); // 잘못된 형식의 행을 로그에 남김
+                }
+            }
+
+            // 테이블 업데이트
+            updateMemberTable(members); // 테이블 업데이트 메서드 호출
+            JOptionPane.showMessageDialog(this, "회원 정보를 성공적으로 불러왔습니다.", "파일 불러오기", JOptionPane.INFORMATION_MESSAGE);
+        } catch (FileNotFoundException e) {
+            JOptionPane.showMessageDialog(this, "파일을 찾을 수 없습니다: " + filePath, "파일 오류", JOptionPane.ERROR_MESSAGE);
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(this, "파일 읽기 중 오류가 발생했습니다.", "파일 읽기 오류", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        }
+    }
+
+    private void updateMemberTable(List<Hsw1009DTO> members) {
+        tableModel.setRowCount(0); // 테이블 초기화
+        for (Hsw1009DTO member : members) {
+            tableModel.addRow(new String[]{member.getName(), member.getEmail(), "*****"}); // 비밀번호는 숨김
+        }
+    }
+
+
+    private void deleteMember() {
+        // 선택된 회원 정보를 삭제하는 메서드
+        int selectedRow = memberTable.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "삭제할 회원을 선택하세요.", "삭제 오류", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int confirm = JOptionPane.showConfirmDialog(this, DELETE_CONFIRM_MSG, "삭제 확인", JOptionPane.YES_NO_OPTION);
+        if (confirm == JOptionPane.YES_OPTION) {
+            String email = (String) memberTable.getValueAt(selectedRow, 1);
+            boolean isDeleted = Hsw1009DAO.deleteMember(email);
+            if (isDeleted) {
+                JOptionPane.showMessageDialog(this, DELETE_SUCCESS_MSG, "삭제 성공", JOptionPane.INFORMATION_MESSAGE);
+                tableModel.removeRow(selectedRow); // 테이블에서 삭제
+            } else {
+                JOptionPane.showMessageDialog(this, DELETE_FAIL_MSG, "삭제 실패", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private String Password(String password) throws NoSuchAlgorithmException {
+        // 비밀번호 해싱 메서드
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        byte[] hash = digest.digest(password.getBytes());
+        StringBuilder hexString = new StringBuilder();
+
+        for (byte b : hash) {
+            String hex = Integer.toHexString(0xff & b);
+            if (hex.length() == 1) hexString.append('0');
+            hexString.append(hex);
+        }
+        return hexString.toString();
+    }
+
     private void clearFields() {
+        // 입력 필드 초기화 메서드
         nameField.setText("");
         emailField.setText("");
         passwordField.setText("");
         profileLabel.setIcon(null);
-        hobbyLabel.setText("취미: 없음");
-        detailArea.setText(""); // 상세 내용 초기화
-    }
-
-    // 회원 조회 메서드
-    private void fetchMembers() {
-        List<Hsw1009DTO> members = memberDAO.fetchAllMembers();
-        tableModel.setRowCount(0); // 기존 데이터 초기화
-        if (members.isEmpty()) {
-            JOptionPane.showMessageDialog(this, NO_MEMBERS_FOUND_MSG, "조회 실패", JOptionPane.INFORMATION_MESSAGE);
-            System.out.println(NO_MEMBERS_FOUND_MSG);
-        } else {
-            for (Hsw1009DTO member : members) {
-                tableModel.addRow(new String[]{member.getName(), member.getEmail(), "*****"});
-            }
-            memberTable.getSelectionModel().addListSelectionListener(e -> showProfileDialog());
-            JOptionPane.showMessageDialog(this, FETCH_SUCCESS_MSG, "조회 성공", JOptionPane.INFORMATION_MESSAGE);
-            System.out.println("회원 목록 조회 성공: " + members.size() + "명의 회원이 조회되었습니다.");
-        }
-    }
-
-    private void showProfileDialog() {
-        int selectedRow = memberTable.getSelectedRow();
-        if (selectedRow >= 0) {
-            String name = (String) tableModel.getValueAt(selectedRow, 0);
-            String email = (String) tableModel.getValueAt(selectedRow, 1);
-
-            Hsw1009DTO member = memberDAO.getMemberByEmail(email);
-            if (member != null) {
-                String profileImagePath = member.getProfileImagePath();
-                String hobby = member.getHobby();
-
-                JFrame profileFrame = new JFrame("프로필");
-                profileFrame.setSize(300, 400);
-                profileFrame.setLayout(new BorderLayout());
-
-                JPanel infoPanel = new JPanel(new GridLayout(3, 1));
-                infoPanel.add(new JLabel("이름: " + name));
-                infoPanel.add(new JLabel("이메일: " + email));
-                infoPanel.add(new JLabel("취미: " + hobby));
-                profileFrame.add(infoPanel, BorderLayout.NORTH);
-
-                JLabel imageLabel = new JLabel();
-                if (profileImagePath != null && !profileImagePath.isEmpty()) {
-                    ImageIcon profileIcon = new ImageIcon(new ImageIcon(profileImagePath)
-                            .getImage().getScaledInstance(150, 150, Image.SCALE_SMOOTH));
-                    imageLabel.setIcon(profileIcon);
-                } else {
-                    imageLabel.setText("No Image");
-                }
-                profileFrame.add(imageLabel, BorderLayout.CENTER);
-
-                profileFrame.setVisible(true);
-                System.out.println("프로필 대화상자가 표시되었습니다: " + name);
-            }
-        } else {
-            System.out.println("선택된 회원이 없습니다.");
-        }
+        interestLabel.setText("관심 분야: 없음");
+        detailArea.setText("");
+        profileImageFile = null; // 이미지 파일 초기화
     }
 
     public static void main(String[] args) {
-        new Hsw1009TestMain();
+        new Hsw1009TestMain(); // 메인 메서드 실행
     }
 }
-
-
-
-
-
 
 
 

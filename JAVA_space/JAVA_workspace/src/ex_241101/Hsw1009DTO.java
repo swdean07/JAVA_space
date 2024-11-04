@@ -1,71 +1,83 @@
 package ex_241101;
 
 public class Hsw1009DTO {
-	// 모델 정의, 데이터를 
-	// 비지니스 모델 (실제 디비)-> 프레젠테이션 모델(출력 형식)
-	String deptno;  // dept 테이블의 칼럼을 저장하기 위한 인스턴스 변수를 정의.
-	String dname;
-	String loc;
-	private String name;
-	private String email;
-	private String password;
-	
-	public Hsw1009DTO(String name2, String email2, String hashedPassword, String string, String string2) {
-	
-	}
-	
-	public Hsw1009DTO(String name, String dname, String loc) {
-		super();
-		this.deptno = name;
-		this.dname = dname;
-		this.loc = loc;
-	}
-	public Hsw1009DTO(String name2, String email2, String hashedPassword, String absolutePath) {
-		// TODO Auto-generated constructor stub
-	}
+    private String name;
+    private String email;
+    private String password;
+    private String interest;
+    private String profileImagePath;
+    private int id; // id 필드 추가
 
-	public String getDeptno() {
-		return deptno;
-	}
-	public void setDeptno(String deptno) {
-		this.deptno = deptno;
-	}
-	public String getDname() {
-		return dname;
-	}
-	public void setDname(String dname) {
-		this.dname = dname;
-	}
-	public String getLoc() {
-		return loc;
-	}
-	public void setLoc(String loc) {
-		this.loc = loc;
-	}
+    // 기본 생성자
+    public Hsw1009DTO(String name, String email, String password, String interest, String profileImagePath) {
+        this.name = name;
+        this.email = email;
+        this.password = password;
+        this.interest = interest;
+        this.profileImagePath = profileImagePath;
+    }
 
-	public void setDeptno(int int1) {
-		return;
-	}
+    // id 포함 생성자
+    public Hsw1009DTO(int id, String name, String email, String password) {
+        this.id = id;
+        this.name = name;
+        this.email = email;
+        this.password = password;
+        this.interest = "없음"; // 기본값
+        this.profileImagePath = ""; // 기본값
+    }
 
-	public String getName() {
-		return name;
-	}
+    // Getter 메서드
+    public String getName() {
+        return name;
+    }
 
-	public String getEmail() {
-		return email;
-	}
+    public String getEmail() {
+        return email;
+    }
 
-	public String getPassword() {
-		return password;
-	}
+    public String getPassword() {
+        return password;
+    }
 
-	public String getProfileImagePath() {
-		// TODO Auto-generated method stub
-		return null;
-	}
+    public String getInterest() {
+        return interest;
+    }
 
-	public String getHobby() {
-		// TODO Auto-generated method stub
-		return null;
-	}
+    public String getProfileImagePath() {
+        return profileImagePath;
+    }
+
+    public int getId() {
+        return id; // id 반환
+    }
+
+    // Setter 메서드
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public void setInterest(String interest) {
+        this.interest = interest;
+    }
+
+    public void setProfileImagePath(String profileImagePath) {
+        this.profileImagePath = profileImagePath;
+    }
+
+    // 프로필 이미지 경로 반환
+    public String getProfileImage() {
+        return profileImagePath;
+    }
 }
+
+
+
